@@ -15,36 +15,36 @@ const csv = require("csv-parser");
 const fastcsv = require("fast-csv");
 
 // post a Sms to customers from file
-const postSms = (inputFilePath = "./data.csv") => {
-  // create a file read stream that loads the
-  // csv that has the customer data
-  fs.createReadStream(inputFilePath)
-    .pipe(csv())
-    .on("data", function (data) {
-      try {
-        //send a post request to the mailjet api
-        const request = mailjet.post("sms-send", { version: "v4" }).request({
-          Text: data.name + " " + data.message,
-          To: "+61401728031",
-          From: "MJPilot",
-        });
+// const postSms = (inputFilePath = "./data.csv") => {
+//   // create a file read stream that loads the
+//   // csv that has the customer data
+//   fs.createReadStream(inputFilePath)
+//     .pipe(csv())
+//     .on("data", function (data) {
+//       try {
+//         //send a post request to the mailjet api
+//         const request = mailjet.post("sms-send", { version: "v4" }).request({
+//           Text: data.name + " " + data.message,
+//           To: "+61401728031",
+//           From: "MJPilot",
+//         });
 
-        request.then((result) => {
-          // display the POST/SEND result in the terminal
-          console.log(result.body);
-          // additional functionality could be to write the output to csv
-          // fastcsv.write(theData, { headers: true }).pipe(ws);
-        });
-      } catch (err) {
-        // log any errors to terminal
-        // log file would be optimal here
-        console.log(err);
-      }
-    })
-    .on("end", function () {
-      console.log("Customer data loaded and sending SMS now");
-    });
-};
+//         request.then((result) => {
+//           // display the POST/SEND result in the terminal
+//           console.log(result.body);
+//           // additional functionality could be to write the output to csv
+//           // fastcsv.write(theData, { headers: true }).pipe(ws);
+//         });
+//       } catch (err) {
+//         // log any errors to terminal
+//         // log file would be optimal here
+//         console.log(err);
+//       }
+//     })
+//     .on("end", function () {
+//       console.log("Customer data loaded and sending SMS now");
+//     });
+// };
 
 const getSms = (outputPath = "./out.csv") => {
   const ws = fs.createWriteStream(outputPath);
@@ -57,24 +57,25 @@ const getSms = (outputPath = "./out.csv") => {
 
   request
     .then((result) => {
-      let theData = JSON.parse(JSON.stringify(result.body.Data));
+      let body = JSON.parse(JSON.stringify(result.body.Data));
       // map the result to a new list of objects
       // then print the output to a csv file
-      let theResult = theData.map((obj) => {
-        let theStatus = {};
-        theStatus["Message ID"] = obj.ID;
-        theStatus["To"] = obj.To;
-        theStatus["Status"] = obj.Status.Name;
+      let resultObj = body.map((obj) => {
+        statusObj = {
+          "Message ID": obj.ID,
+          To: obj.To,
+          Status: obj.Status.Name,
+        };
 
-        return theStatus;
+        return statusObj;
       });
-      console.log(theResult);
-      fastcsv.write(theResult, { headers: true }).pipe(ws);
+      console.log(resultObj);
+      fastcsv.write(resultObj, { headers: true }).pipe(ws);
     })
     .catch((err) => {
       console.log(err.statusCode);
     });
 };
 
-postSms(argv.f);
+//postSms(argv.f);
 getSms(argv.o);
