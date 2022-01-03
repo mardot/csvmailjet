@@ -15,61 +15,66 @@ const csv = require("csv-parser");
 const fastcsv = require("fast-csv");
 
 // post a Sms to customers from file
-// const postSms = (inputFilePath = "./data.csv") => {
-//   // create a file read stream that loads the
-//   // csv that has the customer data
-//   fs.createReadStream(inputFilePath)
-//     .pipe(csv())
-//     .on("data", function (data) {
-//       try {
-//         //send a post request to the mailjet api
-//         const request = mailjet.post("sms-send", { version: "v4" }).request({
-//           Text: data.name + " " + data.message,
-//           To: "+61401728031",
-//           From: "MJPilot",
-//         });
+const postSms = (inputFilePath = "./data.csv") => {
+  // create a file read stream that loads the
+  // csv that has the customer data
+  fs.createReadStream(inputFilePath)
+    .pipe(csv())
+    .on("data", function (data) {
+      try {
+        //send a post request to the mailjet api
+        const request = mailjet.post("sms-send", { version: "v4" }).request({
+          Text: data.name + " " + data.message,
+          To: data.number,
+          From: "MJPilot",
+        });
 
-//         request.then((result) => {
-//           // display the POST/SEND result in the terminal
-//           console.log(result.body);
-//           // additional functionality could be to write the output to csv
-//           // fastcsv.write(theData, { headers: true }).pipe(ws);
-//         });
-//       } catch (err) {
-//         // log any errors to terminal
-//         // log file would be optimal here
-//         console.log(err);
-//       }
-//     })
-//     .on("end", function () {
-//       console.log("Customer data loaded and sending SMS now");
-//     });
-// };
+        request.then((result) => {
+          // display the POST/SEND result in the terminal
+          console.log(result.body);
+          // additional functionality could be to write the output to csv
+          // fastcsv.write(theData, { headers: true }).pipe(ws);
+        });
+      } catch (err) {
+        // log any errors to terminal
+        // log file would be optimal here
+        console.log(err);
+      }
+    })
+    .on("end", function () {
+      console.log("Customer data loaded and sending SMS now");
+    });
+};
 
 const getSms = (outputPath = "./out.csv") => {
   const ws = fs.createWriteStream(outputPath);
 
   // Ask the api for information on sms sends
-  //sms?StatusCode=1,2
-  const request = mailjet
-    .get("sms", { version: "v4" })
-    .request((StatusCode = "1,2"));
+  const request = mailjet.get("sms", { version: "v4" }).request();
 
   request
     .then((result) => {
       let body = JSON.parse(JSON.stringify(result.body.Data));
-      // map the result to a new list of objects
-      // then print the output to a csv file
-      let resultObj = body.map((obj) => {
-        statusObj = {
-          "Message ID": obj.ID,
-          To: obj.To,
-          Status: obj.Status.Name,
-        };
 
-        return statusObj;
-      });
+      console.log(body);
+      var resultObj = body
+        .filter((obj) => {
+          if (obj.Status.Code !== 3) {
+            return true; // keep
+          }
+          return false; // skip
+        })
+        .map((obj) => {
+          statusObj = {
+            "Message ID": obj.ID,
+            To: obj.To,
+            Status: obj.Status.Name,
+          };
+          return statusObj;
+        });
       console.log(resultObj);
+
+      // write the result to csv file
       fastcsv.write(resultObj, { headers: true }).pipe(ws);
     })
     .catch((err) => {
@@ -77,5 +82,5 @@ const getSms = (outputPath = "./out.csv") => {
     });
 };
 
-//postSms(argv.f);
+postSms(argv.f);
 getSms(argv.o);
